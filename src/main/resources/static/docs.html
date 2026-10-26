@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<!--
+  Custom Swagger UI page.
+
+  Same UI as /swagger-ui.html, with one extra behaviour: a responseInterceptor
+  watches EVERY response and, whenever the body contains data.accessToken
+  (verify-phone, refresh, or any future endpoint that returns a token), it
+  automatically authorizes the "bearerAuth" scheme. No more copy/pasting the
+  token into the Authorize dialog.
+
+  Served at /docs.html. The spec is read from /api-docs (springdoc.api-docs.path).
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>API Docs</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+<script>
+    // Name of the security scheme declared in OpenApiConfig.openAPI().
+    const SCHEME_NAME = "bearerAuth";
+
+    window.ui = SwaggerUIBundle({
+        url: "/api-docs",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        // Keep the captured token across page reloads.
+        persistAuthorization: true,
+        presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIStandalonePreset,
+        ],
+        layout: "StandaloneLayout",
+        responseInterceptor: function (response) {
+            try {
+                const body = response.text ? JSON.parse(response.text) : null;
+                const token = body && body.data && body.data.accessToken;
+                if (token) {
+                    window.ui.authActions.authorize({
+                        [SCHEME_NAME]: {
+                            name: SCHEME_NAME,
+                            schema: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
+                            value: token,
+                        },
+                    });
+                }
+            } catch (e) {
+                // Non-JSON body (e.g. file download, 204) — nothing to capture.
+            }
+            return response;
+        },
+    });
+</script>
+</body>
+</html>

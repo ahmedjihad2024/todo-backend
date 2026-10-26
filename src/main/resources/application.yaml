@@ -1,0 +1,181 @@
+spring:
+  application:
+    name: todo
+  jpa:
+    hibernate:
+      ddl-auto: update
+  profiles:
+    # Which profile to load. Defaults to `dev` when SPRING_PROFILES_ACTIVE is unset.
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  servlet:
+    multipart:
+      # Upload caps for multipart endpoints (avatars, project images, tax records).
+      # Must be >= the largest FileCategory.maxBytes (tax records: 10 MB).
+      max-file-size: 10MB
+      max-request-size: 10MB
+  datasource:
+    url: jdbc:postgresql://aws-1-eu-west-1.pooler.supabase.com:6543/postgres?prepareThreshold=0
+    username: postgres.zskifkcgkvehgopplzea
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  messages:
+    # i18n message bundle base name (messages.properties, messages_ar.properties, ...).
+    basename: messages
+    # Force UTF-8 so non-ASCII translations (Arabic, etc.) render correctly.
+    encoding: UTF-8
+    # If a message key has no translation, return the key itself instead of throwing.
+    use-code-as-default-message: true
+  data:
+    redis:
+      # Redis connection URL. Defaults to a local instance (docker-compose) for dev; in production set
+      # REDIS_URL to the managed endpoint, using rediss:// for TLS providers (Upstash, Fly Redis, ...).
+      # Backs rate limiting, presence, the viewing registry, and the live message pub/sub bridge.
+      url: ${REDIS_URL:redis://localhost:6379}
+      # Fail fast instead of hanging if Redis is unreachable (the rate limiter is fail-open on timeout).
+      timeout: 2s
+    web:
+      pageable:
+        # Default page size when the client doesn't pass `size`.
+        default-page-size: 10
+        # Hard cap on page size to prevent clients from requesting huge pages.
+        max-page-size: 100
+        # Page numbers are one-indexed (?page=1 is the first page).
+        one-indexed-parameters: true
+
+server:
+  forward-headers-strategy: native
+
+springdoc:
+  api-docs:
+    # Serve the raw OpenAPI JSON spec here (default is /v3/api-docs).
+    # Import this URL into Postman: http://localhost:<port>/api-docs
+    path: /api-docs
+
+jwt:
+  # Base64-encoded HMAC secret used to sign/verify JWTs. Loaded from the env.
+  secret: ${JWT_SECRET_BASE64}
+
+# Twilio SMS credentials — only required when app.sms=twilio (production).
+# All env-driven; never hard-code. Defaults are blank so the `log` backend
+# (dev/test) boots without any Twilio account.
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID:}
+  auth-token: ${TWILIO_AUTH_TOKEN:}
+  # Sender number in E.164 format, e.g. +15551234567.
+  from-number: ${TWILIO_FROM_NUMBER:}
+
+
+app:
+
+  storage:
+    # File-storage backend. `local` writes to the server's disk (dev default);
+    # `s3` uses S3-compatible object storage — Cloudflare R2, MinIO, or AWS S3.
+    backend: ${STORAGE_BACKEND:local}
+    local:
+      # Base directory for the local backend. Avatars land under <dir>/avatars/.
+      # Relative paths resolve against the process working directory.
+      dir: ${STORAGE_DIR:uploads}
+    s3:
+      # S3-compatible endpoint. Leave blank for AWS S3; set for R2/MinIO, e.g.
+      # https://<account-id>.r2.cloudflarestorage.com
+      endpoint: ${S3_ENDPOINT:}
+      # Region. Use `auto` for Cloudflare R2; a real region (e.g. eu-central-1) for AWS.
+      region: ${S3_REGION:auto}
+      bucket: ${S3_BUCKET:}
+      access-key: ${S3_ACCESS_KEY:}
+      secret-key: ${S3_SECRET_KEY:}
+      # Path-style access: required by R2/MinIO, tolerated by AWS.
+      path-style: ${S3_PATH_STYLE:true}
+
+  # Deep links / share links. Serves /.well-known/apple-app-site-association and
+  # /.well-known/assetlinks.json, plus the fallback landing pages at /stadiums/<id>,
+  # /stores/<id>, /products/<id> and /bookings/<id>.
+  # NOTE: this app must be reachable over HTTPS on the share domain for the OS to verify it.
+  share-link:
+    # Full iOS app IDs as TEAMID.BUNDLEID. Comma-separated for multiple builds.
+    ios-app-ids: ${IOS_APP_IDS:}
+    # Android application id, e.g. com.personal.todo
+    android-package-name: ${ANDROID_PACKAGE_NAME:}
+    # SHA-256 signing fingerprints, colon-separated uppercase hex. MUST include the
+    # Play App Signing key, not only the local upload key.
+    android-sha256-fingerprints: ${ANDROID_SHA256_FINGERPRINTS:}
+    # Custom scheme used as the last-resort open attempt on the landing page.
+    app-scheme: ${APP_SCHEME:todoappuser}
+    app-store-url: ${APP_STORE_URL:}
+    play-store-url: ${PLAY_STORE_URL:}
+
+  # SMS backend: `log` writes the verification code to the application log
+  # (dev/test); `twilio` sends a real SMS through the Twilio settings below.
+  sms: ${APP_SMS:log}
+
+  admin:
+    # Phone numbers (E.164) that get the ADMIN role on registration/login.
+    phones: ${ADMIN_PHONES:}
+
+  rate-limit:
+    # Defaults are tuned for production: strict enough to stop brute-force,
+    # loose enough to never inconvenience a real user. The `dev` profile
+    # overrides these with much higher caps for local testing.
+    # Master switch for the rate-limit filter.
+    enabled: true
+    login:
+      # Max login attempts per refill window.
+      capacity: 20
+      # Window during which the bucket fully refills (ISO-8601 duration).
+      refill: PT1M
+    register:
+      # Max account registrations per window (per IP).
+      capacity: 20
+      refill: PT1H
+    refresh:
+      # Token-refresh calls per window — higher than login because clients refresh often.
+      capacity: 120
+      refill: PT1M
+    admin-login:
+      # Tighter than the user login bucket: the admin persona is a high-value brute-force target.
+      capacity: 5
+      refill: PT1M
+    admin-register:
+      # Admin registration is a rare, manually-driven event (bootstrapped phones only).
+      capacity: 5
+      refill: PT1H
+    authenticated:
+      # General per-user limit for authenticated endpoints.
+      capacity: 300
+      refill: PT1M
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Expose /health, /info, and /prometheus (the metrics scrape target).
+        # Everything else stays internal.
+        include: health, info, prometheus
+  endpoint:
+    health:
+      # Hide detailed health info from anonymous callers; show it to authorized ones.
+      show-details: when_authorized
+      # Enable Kubernetes-style liveness/readiness probes.
+      probes:
+        enabled: true
+  info:
+    env:
+      # Allow `info.*` properties below to surface in /actuator/info.
+      enabled: true
+  metrics:
+    tags:
+      # Every metric is tagged with the app name so dashboards can filter when
+      # multiple services share the same Prometheus instance.
+      application: ${spring.application.name}
+    distribution:
+      # Emit histogram buckets for HTTP server timings so Prometheus/Grafana
+      # can compute true percentiles (p95, p99) instead of just averages.
+      percentiles-histogram:
+        http.server.requests: true
+
+info:
+  # Metadata published at /actuator/info — useful for ops dashboards.
+  app:
+    name: ${spring.application.name}
+    description: todo API with JWT auth, i18n, and token revocation
+    version: 0.0.1-SNAPSHOT

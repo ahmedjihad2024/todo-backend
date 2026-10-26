@@ -1,0 +1,10 @@
+package org.personal.todo.account.dto
+
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
+
+data class ConfirmPhoneChangeRequest(
+    @field:NotBlank(message = "{validation.cannot_be_blank}")
+    @field:Pattern(regexp = "^\\d{5}\$", message = "{validation.verification_code.pattern}")
+    val code: String,
+)
