@@ -3,7 +3,12 @@ spring:
     name: todo
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+
   profiles:
     # Which profile to load. Defaults to `dev` when SPRING_PROFILES_ACTIVE is unset.
     active: ${SPRING_PROFILES_ACTIVE:dev}

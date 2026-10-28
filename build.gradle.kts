@@ -146,6 +146,10 @@ dependencies {
     implementation("me.paulschwarz:spring-dotenv:4.0.0")
 
     implementation("net.coobird:thumbnailator:0.4.20")
+
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
+    implementation("org.springframework.boot:spring-boot-starter-flyway")
 }
 
 kotlin {

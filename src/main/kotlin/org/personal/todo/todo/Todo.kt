@@ -25,13 +25,6 @@ import java.util.UUID
 @Entity
 @Table(
     name = "todos",
-    indexes = [
-        Index(name = "idx_todos_account_created", columnList = "account_id, created_at"),
-        // Honestly, for a _todo app, [idx_todos_account_created] alone is enough at the start.
-        // Add the others when you see slow queries.
-        // Index(name = "idx_todos_account_completed", columnList = "account_id, completed"),
-        // Index(name = "idx_todos_account_priority", columnList = "account_id, priority"),
-    ]
 )
 data class Todo (
     @Id
