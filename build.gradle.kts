@@ -147,9 +147,14 @@ dependencies {
 
     implementation("net.coobird:thumbnailator:0.4.20")
 
+    // Indexes migration
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
+
+    // Caching
+    implementation("org.springframework.boot:spring-boot-starter-cache")
+    implementation("com.github.ben-manes.caffeine:caffeine")
 }
 
 kotlin {

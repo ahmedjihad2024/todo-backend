@@ -1,8 +1,7 @@
 package org.personal.todo.todo.dto
 
-import jakarta.persistence.Column
-import org.hibernate.annotations.CreationTimestamp
 import org.personal.todo.todo.Priority
+import java.io.Serializable
 import java.time.Instant
 import java.util.UUID
 
@@ -14,4 +13,4 @@ data class TodoResponse(
     var dueDate: Instant? = null,
     var completed: Boolean,
     val createdAt: Instant,
-)
+): Serializable

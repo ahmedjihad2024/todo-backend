@@ -37,6 +37,8 @@ logging:
     # Mongo driver is noisy at INFO; keep it quiet.
     org.mongodb.driver: WARN
 
+    org.springframework.cache: TRACE
+
 app:
   cors:
     # Allow common local dev frontends (CRA, Vite, etc.) to call the API.

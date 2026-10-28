@@ -10,6 +10,8 @@ import org.personal.todo.todo.dto.AddTodoRequest
 import org.personal.todo.todo.dto.SearchTodoRequest
 import org.personal.todo.todo.dto.TodoResponse
 import org.personal.todo.todo.dto.UpdateTodoRequest
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import org.springframework.data.domain.Pageable
 import java.util.UUID
@@ -54,15 +56,17 @@ class TodoService(
         return ApiResponse.ok(result.toResponse())
     }
 
+    @Cacheable(cacheNames = ["todos"], key = "#accountId + ':' + #noteId")
     fun getTodoById(accountId: String, noteId: String): ApiResponse<TodoResponse>{
         val result = todoRepository.findByAccountAndId(
             accountRepo.getReferenceById(accountId.toUuid()),
             noteId.toUuid()
-        ) ?: throw ApiException.NotFound("{validation.todo_id.not_found}")
+        ) ?: throw ApiException.NotFound("validation.todo_id.not_found")
 
         return ApiResponse.ok(result.toResponse())
     }
 
+    @CacheEvict(cacheNames = ["todos"], key = "#accountId + ':' + #noteId")
     fun deleteTodoById(accountId: String, noteId: String) {
         todoRepository.deleteByIdAndAccountId(
             noteId.toUuid(),
@@ -70,11 +74,12 @@ class TodoService(
         )
     }
 
+    @CacheEvict(cacheNames = ["todos"], key = "#accountId + ':' + #noteId")
     fun updateTodoById(accountId: String, noteId: String, request: UpdateTodoRequest) : ApiResponse<TodoResponse> {
         val result = todoRepository.findByAccountAndId(
             accountRepo.getReferenceById(accountId.toUuid()),
             noteId.toUuid()
-        ) ?: throw ApiException.NotFound("{validation.todo_id.not_found}")
+        ) ?: throw ApiException.NotFound("validation.todo_id.not_found")
 
         val updateResult = result.copy(
             title = request.title ?: result.title,

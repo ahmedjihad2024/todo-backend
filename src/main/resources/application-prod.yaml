@@ -28,6 +28,7 @@ logging:
     org.springframework.web: WARN
     org.springframework.security: WARN
     org.mongodb.driver: WARN
+    org.springframework.cache: WARN
 
 app:
   # Send real SMS in production via Twilio.
