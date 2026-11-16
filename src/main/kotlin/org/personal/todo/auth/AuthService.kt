@@ -14,7 +14,7 @@ import org.personal.todo.common.extentions.sha256
 import org.personal.todo.common.extentions.tr
 import org.personal.todo.common.extentions.toUuid
 import org.personal.todo.security.jwt.JwtService
-import org.personal.todo.security.jwt.TokenBlacklist
+import org.personal.todo.security.jwt.token_block_list.TokenBlacklist
 import org.personal.todo.account.AccountService
 import org.personal.todo.account.entities.Account
 import org.personal.todo.account.enums.Role
@@ -80,7 +80,7 @@ class AuthService(
 
     @Transactional
     fun login(phone: String, role: Role): AuthResponse.SetUpRequired {
-        var user = accountRepository.findByPhone(phone)
+        val user = accountRepository.findByPhone(phone)
             ?: return AuthResponse.SetUpRequired(
                 phone = phone,
                 message = "auth.need_register".tr(),
@@ -91,7 +91,6 @@ class AuthService(
         // profile's deleted flag). No-op if the persona isn't deleted. Must run BEFORE the role check.
         val userId = user.requireId()
         accountService.restoreRole(userId, role)
-        user = accountRepository.findById(userId).orElse(user)
 
         // Registration is per-persona: an account registered as PROVIDER is NOT registered as USER.
         // If this persona isn't set up, route the client to register instead of issuing a code that
@@ -167,11 +166,11 @@ class AuthService(
         if (stored.code != code.sha256()) {
             throw ApiException.BadRequest("error.auth.verification_code_invalid")
         }
-        phoneVerificationCodeRepository.delete(stored)
-        // Never mint a token for a role the account doesn't actually hold.
+
         if (stored.role !in user.roles) {
             throw ApiException.BadRequest("error.account.role_not_present")
         }
+        phoneVerificationCodeRepository.delete(stored)
         // This persona has now completed setup.
         profileService.markRegistered(userId, stored.role)
         val tokens = issueTokens(user, stored.role)
@@ -209,8 +208,6 @@ class AuthService(
         val stored = refreshTokenRepository.findByAccountIdAndHashedToken(userId, hashed)
             ?: throw ApiException.Unauthorized("error.auth.refresh_token_revoked")
 
-        refreshTokenRepository.delete(stored)
-
         val user = accountRepository.findById(userId).orElseThrow {
             ApiException.Unauthorized("error.auth.refresh_token_revoked")
         }
@@ -218,6 +215,7 @@ class AuthService(
         if (stored.role !in user.roles) {
             throw ApiException.Unauthorized("error.auth.refresh_token_revoked")
         }
+        refreshTokenRepository.delete(stored)
         return issueTokens(user, stored.role)
     }
 

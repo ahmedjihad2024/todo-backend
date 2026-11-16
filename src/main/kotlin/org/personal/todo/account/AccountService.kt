@@ -21,6 +21,8 @@ import org.personal.todo.account.mapper.toResponse
 import org.personal.todo.account.repository.PhoneChangeRequestRepository
 import org.personal.todo.account.repository.AccountRepository
 import org.personal.todo.common.extentions.toUuid
+import org.personal.todo.security.jwt.JwtService
+import org.personal.todo.security.jwt.token_block_list.TokenBlacklist
 
 import org.springframework.stereotype.Service
 import org.springframework.context.ApplicationEventPublisher
@@ -40,6 +42,8 @@ class AccountService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val profileService: ProfileService,
     private val events: ApplicationEventPublisher,
+    private val tokenBlacklist: TokenBlacklist,
+    private val jwtService: JwtService,
 ) {
     fun me(id: String, role: Role): ApiResponse<AccountResponse> {
         val user = accountRepository.findById(id.toUuid())
@@ -48,10 +52,10 @@ class AccountService(
     }
 
     @Transactional
-    fun deleteMe(id: String, role: Role): ApiResponse<Unit> {
+    fun deleteMe(id: String, role: Role, authHeader: String): ApiResponse<Unit> {
         val account = getAccount(id)
         validateRolePresent(account, role)
-        softDeletePersona(account, role)
+        softDeletePersona(account, role, authHeader)
         return ApiResponse.ok(Unit)
     }
 
@@ -65,12 +69,14 @@ class AccountService(
         }
     }
 
-    private fun softDeletePersona(account: Account, role: Role) {
+    private fun softDeletePersona(account: Account, role: Role, authHeader: String) {
         val accountId = account.requireId()
         profileService.markDeleted(accountId, role, Instant.now())
         account.roles.remove(role)
         accountRepository.save(account)
         refreshTokenRepository.deleteAllByAccountId(accountId)
+        val jti = jwtService.getJti(authHeader)
+        tokenBlacklist.revoke(jti, expiresAt = Instant.now().plus(30, ChronoUnit.DAYS))
         events.publishEvent(PersonaRoleDeactivated(accountId, role))
     }
 

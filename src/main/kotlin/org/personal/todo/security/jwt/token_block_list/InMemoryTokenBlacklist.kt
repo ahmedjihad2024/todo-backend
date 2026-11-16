@@ -1,4 +1,4 @@
-package org.personal.todo.security.jwt
+package org.personal.todo.security.jwt.token_block_list
 
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component

@@ -1,4 +1,4 @@
-package org.personal.todo.security.jwt
+package org.personal.todo.security.jwt.token_block_list
 
 import org.springframework.context.annotation.Profile
 import org.springframework.data.redis.core.StringRedisTemplate
@@ -12,7 +12,7 @@ import java.time.Instant
  * On logout (or any revocation) the `jti` is recorded with a lifetime equal to the token's *remaining*
  * lifetime, so the entry self-expires exactly when the token would have anyway — no sweep job, no
  * growth beyond the set of still-valid revoked tokens. A token revoked on one instance is rejected
- * everywhere it's visible (see [JwtAuthFilter]).
+ * everywhere it's visible (see [org.personal.todo.security.jwt.JwtAuthFilter]).
  *
  * Two implementations are wired by profile:
  * - prod ([RedisTokenBlacklist]): Redis-backed, so the blacklist is shared across every replica.
